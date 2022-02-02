@@ -2,35 +2,68 @@ from tkinter import *
 import datetime
 import time
 import threading
+import csv
+import os
+import random
+
+random.seed(5188)
+
+#Create csv writer outside, so it can be called by functions
+out_file = open("results.csv","w")
+out_file.write("")
+
+writer = csv.writer(out_file,delimiter=",",lineterminator="\n")
+
+fields = ["Bus Color", "Picked Color", "Time"]
+writer.writerow(fields)
+
 
 class App(threading.Thread):
 
-    def __init__(self, baseButtons, modButtons):
+    def __init__(self):
         threading.Thread.__init__(self)
         self.start()
-        self.baseButtons = baseButtons
-        self.modButtons = modButtons
-        self.index = 0;
+        self.baseColors = ['red', 'goldenrod4', 'green', 'yellow', 'blue', 'purple']
+        self.modColors = ['red', 'goldenrod4', 'green', 'yellow', 'blue', 'purple']
+        self.activeTest = ""
+        self.round = 0
+        self.start = 0
+        self.end = 0
 
     def callback(self):
         self.root.quit()
 
-    def buttonCallback(self, info, i, isBase):
-        if(info[0]["color"] == info[i]["color"]):
-            self.index += 1
-            if(self.index >= len(self.baseButtons)):
-                self.root.destroy()
-            else:
-                self.renderButtons(self.baseButtons[self.index] if isBase else self.modButtons[self.index], isBase)
+    def buttonCallback(self, colorPressed, correctColor, colors):
+        self.end = time.time()
+
+        writer.writerow([correctColor, colorPressed, self.end - self.start])
+        self.round += 1
+        if(self.round >= 48): # 8 trials per color 
+            os.remove(self.activeTest + "_results.csv")
+            out_file.close()
+            os.rename("results.csv", self.activeTest + "_results.csv")
+            self.root.destroy()
+        else:
+            self.renderButtons(colors)
             
 
-    def renderButtons(self, toRender, isBase):    
-        busButton = Button(self.root, bg = toRender[0]["color"], height = 3, width = 10)
-        busButton.place(x = toRender[0]["x"], y = toRender[0]["y"])
+    def renderButtons(self, colors):    
+        busButton = Button(self.root, bg = colors[self.round % 6], height = 3, width = 10)
+        busButton.place(x = 230, y = 160)
+        shuffled = list(colors)
+        random.shuffle(shuffled)
+        for i in range(len(colors)):
+            button = Button(self.root, bg = shuffled[i], height = 3, width = 10, command = lambda i=i: self.buttonCallback(shuffled[i], colors[self.round % 6], colors))
+            button.place(x = 10 + i * 90, y = 50)
+        self.start = time.time()
 
-        for i in range(1, len(toRender)):
-            button = Button(self.root, bg = toRender[i]["color"], height = 3, width = 10, command = lambda i=i: self.buttonCallback(toRender, i, isBase))
-            button.place(x = toRender[i]["x"], y = toRender[i]["y"])
+    def activateBase(self):
+        self.activeTest = 'base'
+        self.renderButtons(self.baseColors)
+
+    def activateMod(self):
+        self.activeTest = 'mod'
+        self.renderButtons(self.modColors)
 
     def run(self):
         self.root = Tk()
@@ -46,225 +79,13 @@ class App(threading.Thread):
         lbl = Label(self.root, font=('Helvetica 12 bold'), text="current bus at stop :")
         lbl.place(x=70, y=170)
 
-        baseTrial = Button(self.root, text="Base Trial", height = 3, width = 10, command=lambda: self.renderButtons(self.baseButtons[self.index], True))
+        baseTrial = Button(self.root, text="Base Trial", height = 3, width = 10, command=lambda: self.activateBase())
         baseTrial.place(x = 230, y = 300)
 
-        modTrial = Button(self.root, text="Mod Trial", height = 3, width = 10, command=lambda: self.renderButtons(self.modButtons[self.index], False))
+        modTrial = Button(self.root, text="Mod Trial", height = 3, width = 10, command=lambda: self.activateMod())
         modTrial.place(x = 320, y = 300)
 
         self.root.mainloop()
 
-buttons = [
-    [{
-        "color": 'red',
-        "x": 230,
-        "y": 160   
-    },
-    {
-        "color": 'red',
-        "x": 10,
-        "y": 55   
-    },
-    {
-        "color": 'goldenrod4',
-        "x": 100,
-        "y": 55   
-    },
-    {
-        "color": 'green',
-        "x": 190,
-        "y": 55   
-    },
-    {
-        "color": 'yellow',
-        "x": 280,
-        "y": 55   
-    },
-    {
-        "color": 'blue',
-        "x": 370,
-        "y": 55   
-    },
-    {
-        "color": 'purple',
-        "x": 460,
-        "y": 55   
-    }],
-    [{
-        "color": 'goldenrod4',
-        "x": 230,
-        "y": 160   
-    },
-    {
-        "color": 'red',
-        "x": 10,
-        "y": 55   
-    },
-    {
-        "color": 'goldenrod4',
-        "x": 100,
-        "y": 55   
-    },
-    {
-        "color": 'green',
-        "x": 190,
-        "y": 55   
-    },
-    {
-        "color": 'yellow',
-        "x": 280,
-        "y": 55   
-    },
-    {
-        "color": 'blue',
-        "x": 370,
-        "y": 55   
-    },
-    {
-        "color": 'purple',
-        "x": 460,
-        "y": 55   
-    }],
-    [{
-        "color": 'green',
-        "x": 230,
-        "y": 160   
-    },
-    {
-        "color": 'red',
-        "x": 10,
-        "y": 55   
-    },
-    {
-        "color": 'goldenrod4',
-        "x": 100,
-        "y": 55   
-    },
-    {
-        "color": 'green',
-        "x": 190,
-        "y": 55   
-    },
-    {
-        "color": 'yellow',
-        "x": 280,
-        "y": 55   
-    },
-    {
-        "color": 'blue',
-        "x": 370,
-        "y": 55   
-    },
-    {
-        "color": 'purple',
-        "x": 460,
-        "y": 55   
-    }],
-    [{
-        "color": 'yellow',
-        "x": 230,
-        "y": 160   
-    },
-    {
-        "color": 'red',
-        "x": 10,
-        "y": 55   
-    },
-    {
-        "color": 'goldenrod4',
-        "x": 100,
-        "y": 55   
-    },
-    {
-        "color": 'green',
-        "x": 190,
-        "y": 55   
-    },
-    {
-        "color": 'yellow',
-        "x": 280,
-        "y": 55   
-    },
-    {
-        "color": 'blue',
-        "x": 370,
-        "y": 55   
-    },
-    {
-        "color": 'purple',
-        "x": 460,
-        "y": 55   
-    }],
-    [{
-        "color": 'blue',
-        "x": 230,
-        "y": 160   
-    },
-    {
-        "color": 'red',
-        "x": 10,
-        "y": 55   
-    },
-    {
-        "color": 'goldenrod4',
-        "x": 100,
-        "y": 55   
-    },
-    {
-        "color": 'green',
-        "x": 190,
-        "y": 55   
-    },
-    {
-        "color": 'yellow',
-        "x": 280,
-        "y": 55   
-    },
-    {
-        "color": 'blue',
-        "x": 370,
-        "y": 55   
-    },
-    {
-        "color": 'purple',
-        "x": 460,
-        "y": 55   
-    }],
-    [{
-        "color": 'purple',
-        "x": 230,
-        "y": 160   
-    },
-    {
-        "color": 'red',
-        "x": 10,
-        "y": 55   
-    },
-    {
-        "color": 'goldenrod4',
-        "x": 100,
-        "y": 55   
-    },
-    {
-        "color": 'green',
-        "x": 190,
-        "y": 55   
-    },
-    {
-        "color": 'yellow',
-        "x": 280,
-        "y": 55   
-    },
-    {
-        "color": 'blue',
-        "x": 370,
-        "y": 55   
-    },
-    {
-        "color": 'purple',
-        "x": 460,
-        "y": 55   
-    }],
-]
 
-app = App(buttons, buttons)
+app = App()
