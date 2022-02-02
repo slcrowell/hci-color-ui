@@ -1,121 +1,91 @@
 from tkinter import *
 import datetime
 import time
-window = Tk()
-i=0;
+import threading
+import csv
+import os
+import random
 
-window.title("Potsdam Transport Company Bus Shedule Manager")
-window.geometry('1000x600')
-lbl = Label(window, font=('Helvetica 12 bold'), text="Operators: Press route icon associated with the bus that has arrived at the stop to record route delays, Arrivals will be broadcast \n over headsets or shown at the bottom right ")
-lbl.grid(column=0, row=0)
+random.seed(5188)
 
-# Create a function with one paramter, i.e., of
-# the text you want to show when button is clicked
-def which_button(button_press):
-    # Printing the text when a button is clicked
-    print(button_press)
+#Create csv writer outside, so it can be called by functions
+out_file = open("results.csv","w")
+out_file.write("")
 
-def stoptimer1():
-    end = time.time()
-    print("red button pressed")
-    gap = end - start;
-    a="reaction time is"
-    print(f"{a}  {gap}")
+writer = csv.writer(out_file,delimiter=",",lineterminator="\n")
 
-def stoptimer2():
-    end = time.time()
-    print("brown button pressed")
-    gap = end - start;
-    a="reaction time is"
-    print(f"{a}  {gap}")
-
-def stoptimer3():
-    end = time.time()
-    print("green button pressed")
-    gap = end - start;
-    a="reaction time is"
-    print(f"{a}  {gap}")
-
-def stoptimer4():
-    end = time.time()
-    print("yellow button pressed")
-    gap = end - start;
-    a="reaction time is"
-    print(f"{a}  {gap}")
-
-def stoptimer5():
-    end = time.time()
-    print("blue button pressed")
-    gap = end - start;
-    a="reaction time is"
-    print(f"{a}  {gap}")
-
-def stoptimer6():
-    end = time.time()
-    print("purple button pressed")
-    gap = end - start;
-    a="reaction time is"
-    print(f"{a}  {gap}")
+fields = ["Bus Color", "Picked Color", "Time"]
+writer.writerow(fields)
 
 
-# Creating and displaying of button b1
-b1 = Button(window, bg = 'red',height = 3, width = 10,
-            command = stoptimer1)
-b1.place(x=10, y=55)
+class App(threading.Thread):
 
-# Creating and displaying of button b2
-b2 = Button(window, bg = 'goldenrod4',height = 3, width = 10,
-            command = stoptimer2)
-b2.place(x=100, y=55)
+    def __init__(self):
+        threading.Thread.__init__(self)
+        self.start()
+        self.baseColors = ['red', 'goldenrod4', 'green', 'yellow', 'blue', 'purple']
+        self.modColors = ['red', 'goldenrod4', 'green', 'yellow', 'blue', 'purple']
+        self.activeTest = ""
+        self.round = 0
+        self.start = 0
+        self.end = 0
 
-# Creating and displaying of button b3
-b3 = Button(window, bg = 'green',height = 3, width = 10,
-            command = stoptimer3)
-b3.place(x=190, y=55)
+    def callback(self):
+        self.root.quit()
 
-# Creating and displaying of button b4
-b4 = Button(window, bg = 'yellow',height = 3, width = 10,
-            command = stoptimer4)
-b4.place(x=280, y=55)
+    def buttonCallback(self, colorPressed, correctColor, colors):
+        self.end = time.time()
 
+        writer.writerow([correctColor, colorPressed, self.end - self.start])
+        self.round += 1
+        if(self.round >= 48): # 8 trials per color 
+            os.remove(self.activeTest + "_results.csv")
+            out_file.close()
+            os.rename("results.csv", self.activeTest + "_results.csv")
+            self.root.destroy()
+        else:
+            self.renderButtons(colors)
+            
 
-# Creating and displaying of button b5
-b5 = Button(window, bg = 'blue',height = 3, width = 10,
-            command = stoptimer5)
-b5.place(x=370, y=55)
+    def renderButtons(self, colors):    
+        busButton = Button(self.root, bg = colors[self.round % 6], height = 3, width = 10)
+        busButton.place(x = 230, y = 160)
+        shuffled = list(colors)
+        random.shuffle(shuffled)
+        for i in range(len(colors)):
+            button = Button(self.root, bg = shuffled[i], height = 3, width = 10, command = lambda i=i: self.buttonCallback(shuffled[i], colors[self.round % 6], colors))
+            button.place(x = 10 + i * 90, y = 50)
+        self.start = time.time()
 
+    def activateBase(self):
+        self.activeTest = 'base'
+        self.renderButtons(self.baseColors)
 
-# Creating and displaying of button b6
-b6 = Button(window, bg = 'purple',height = 3, width = 10,
-            command = stoptimer6)
-b6.place(x=460, y=55)
+    def activateMod(self):
+        self.activeTest = 'mod'
+        self.renderButtons(self.modColors)
 
-
-
-lbl = Label(window, font=('Helvetica 12 bold'), text="current bus at stop :")
-lbl.place(x=70, y=170)
-
-#display the current bus color upon click
-print("summery of user feedback")
-def fun1():
-     global i
-     i=0;
-def fun2():
-    global i
-    i=i+1;
-mylist = ["red", "green", "blue","purple","goldenrod4","yellow"]
-def update_color():
-    color = mylist[i]
-    print(color + "  color bus arrived")
-    b10 = Button(window, bg = color ,height = 3, width = 10)
-    b10.place(x=230, y=160)
-    global start
-    start = time.time()
-    fun2();
-    if i==6:
-        fun1();
-button = Button(window,width=20,font=('Helvetica 12 bold'), text="click here for the next bus", command=update_color)
-button.place(x=50, y=300)
+    def run(self):
+        self.root = Tk()
+        self.root.protocol("WM_DELETE_WINDOW", self.callback)
 
 
-window.mainloop()
+        self.root.title("Potsdam Transport Company Bus Shedule Manager")
+        self.root.geometry('1000x600')
+
+        directions = Label(self.root, font=('Helvetica 12 bold'), text="Operators: Press route icon associated with the bus that has arrived at the stop to record route delays, Arrivals will be broadcast \n over headsets or shown at the bottom right ")
+        directions.grid(column=0, row=0)
+
+        lbl = Label(self.root, font=('Helvetica 12 bold'), text="current bus at stop :")
+        lbl.place(x=70, y=170)
+
+        baseTrial = Button(self.root, text="Base Trial", height = 3, width = 10, command=lambda: self.activateBase())
+        baseTrial.place(x = 230, y = 300)
+
+        modTrial = Button(self.root, text="Mod Trial", height = 3, width = 10, command=lambda: self.activateMod())
+        modTrial.place(x = 320, y = 300)
+
+        self.root.mainloop()
+
+
+app = App()
